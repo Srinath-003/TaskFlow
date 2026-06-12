@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Task = require("../models/Task");
 
@@ -7,6 +8,17 @@ const getTopicFilter = (topic) => {
   if (topic === "General") return { $or: [{ topic }, { topic: { $exists: false } }] };
   return { topic };
 };
+
+router.use((req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      message: "Database is not connected",
+      error: "MongoDB Atlas connection is not ready"
+    });
+  }
+
+  next();
+});
 
 // GET all tasks
 router.get("/", async (req, res) => {
@@ -45,6 +57,23 @@ router.delete("/", async (req, res) => {
     res.json({ message: req.query.topic ? "Topic tasks deleted" : "All tasks deleted" });
   } catch (err) {
     res.status(500).json({ message: "Failed to clear tasks", error: err.message });
+  }
+});
+
+// RENAME topic
+router.patch("/topic", async (req, res) => {
+  try {
+    const oldTopic = req.body.oldTopic && req.body.oldTopic.trim();
+    const newTopic = req.body.newTopic && req.body.newTopic.trim();
+
+    if (!oldTopic || !newTopic) {
+      return res.status(400).json({ message: "Old and new topic names are required" });
+    }
+
+    const result = await Task.updateMany(getTopicFilter(oldTopic), { topic: newTopic });
+    res.json({ message: "Topic renamed", modifiedCount: result.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to rename topic", error: err.message });
   }
 });
 

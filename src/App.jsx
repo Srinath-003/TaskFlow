@@ -5,7 +5,7 @@ import Header from "./components/header";
 import Home from "./pages/home";
 import "./App.css";
 
-const API_URL = "http://localhost:5000/api/tasks";
+const API_URL = "/api/tasks";
 const DEFAULT_TOPIC = "General";
 
 function normalizeTopic(topic) {
@@ -60,7 +60,7 @@ function App() {
       setTopic(nextTopic);
       setError("");
     } catch (err) {
-      setError("Task was not added. Please try again.");
+      setError(err.response?.data?.error || "Task was not added. Please try again.");
       console.log(err);
     }
   };
@@ -73,6 +73,43 @@ function App() {
     setSelectedTopic(nextTopic);
     setTopic(nextTopic);
     setNewTopic("");
+  };
+
+  const editTopic = async (oldTopic, nextTopicName) => {
+    const currentTopic = normalizeTopic(oldTopic);
+    const nextTopic = normalizeTopic(nextTopicName);
+
+    if (!nextTopic || currentTopic === nextTopic) return;
+
+    try {
+      await axios.patch(`${API_URL}/topic`, {
+        oldTopic: currentTopic,
+        newTopic: nextTopic
+      });
+
+      setTasks((currentTasks) =>
+        currentTasks.map((item) =>
+          normalizeTopic(item.topic) === currentTopic
+            ? { ...item, topic: nextTopic }
+            : item
+        )
+      );
+      setCustomTopics((currentTopics) => {
+        const renamedTopics = currentTopics.map((item) =>
+          item === currentTopic ? nextTopic : item
+        );
+
+        return renamedTopics.includes(nextTopic)
+          ? [...new Set(renamedTopics)]
+          : [...new Set([...renamedTopics, nextTopic])];
+      });
+      setSelectedTopic(nextTopic);
+      setTopic(nextTopic);
+      setError("");
+    } catch (err) {
+      setError("Could not rename this topic.");
+      console.log(err);
+    }
   };
 
   const toggleTask = async (id) => {
@@ -154,6 +191,7 @@ function App() {
         setSelectedTopic={setSelectedTopic}
         topics={topics}
         addTopic={addTopic}
+        editTopic={editTopic}
         addTask={addTask}
         tasks={selectedTasks}
         allTasks={tasks}
