@@ -16,7 +16,7 @@ function Login()
   const handleSignup = async () => {
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/signup",
+        "https://task-manager-6wdd.onrender.com/api/auth/signup",
         {
           name,
           email,
@@ -34,7 +34,7 @@ function Login()
   const handleLogin = async () => {
   try {
     const res = await axios.post(
-      "http://localhost:5000/api/auth/login",
+      "https://task-manager-6wdd.onrender.com/api/auth/login",
       {
         email,
         password
