@@ -5,7 +5,7 @@ import Header from "./components/header";
 import Home from "./pages/home";
 import "./App.css";
 
-const API_URL = "/api/tasks";
+const API_URL = "https://task-manager-6wdd.onrender.com/api/tasks";
 const DEFAULT_TOPIC = "General";
 
 function normalizeTopic(topic) {
