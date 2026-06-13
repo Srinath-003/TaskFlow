@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-
+import Login from "./pages/Login";
 import Header from "./components/header";
 import Home from "./pages/home";
 import "./App.css";
@@ -24,16 +24,23 @@ function App() {
 
   useEffect(() => {
     const fetchTasks = async () => {
-      try {
-        const res = await axios.get(API_URL);
-        setTasks(res.data);
-        setStatus("ready");
-      } catch (err) {
-        setError("Could not load tasks. Make sure the backend is running.");
-        setStatus("error");
-        console.log(err);
+  try {
+    const user = JSON.parse(sessionStorage.getItem("user"));
+
+    const res = await axios.get(API_URL, {
+      params: {
+        userId: user.id
       }
-    };
+    });
+
+    setTasks(res.data);
+    setStatus("ready");
+  } catch (err) {
+    setError("Could not load tasks. Make sure the backend is running.");
+    setStatus("error");
+    console.log(err);
+  }
+};
 
     fetchTasks();
   }, []);
@@ -49,11 +56,16 @@ function App() {
 
   const addTask = async () => {
     const text = task.trim();
+    const user = JSON.parse(sessionStorage.getItem("user"));
     const nextTopic = normalizeTopic(topic);
     if (!text) return;
 
     try {
-      const res = await axios.post(API_URL, { text, topic: nextTopic });
+      const res = await axios.post(API_URL, {
+  text,
+  topic: nextTopic,
+  userId: user.id
+});
       setTasks((currentTasks) => [res.data, ...currentTasks]);
       setSelectedTopic(nextTopic);
       setTask("");
@@ -175,37 +187,41 @@ function App() {
 
   const completedCount = selectedTasks.filter((item) => item.completed).length;
   const activeCount = selectedTasks.length - completedCount;
+if (!sessionStorage.getItem("token")) {
+  return <Login />;
+}
 
-  return (
-    <div className="app-shell">
-      <Header />
 
-      <Home
-        task={task}
-        setTask={setTask}
-        topic={topic}
-        setTopic={setTopic}
-        newTopic={newTopic}
-        setNewTopic={setNewTopic}
-        selectedTopic={selectedTopic}
-        setSelectedTopic={setSelectedTopic}
-        topics={topics}
-        addTopic={addTopic}
-        editTopic={editTopic}
-        addTask={addTask}
-        tasks={selectedTasks}
-        allTasks={tasks}
-        toggleTask={toggleTask}
-        deleteTask={deleteTask}
-        editTask={editTask}
-        clearTopic={clearTopic}
-        status={status}
-        error={error}
-        activeCount={activeCount}
-        completedCount={completedCount}
-      />
-    </div>
-  );
+return (
+  <div className="app-shell">
+    <Header />
+
+    <Home
+      task={task}
+      setTask={setTask}
+      topic={topic}
+      setTopic={setTopic}
+      newTopic={newTopic}
+      setNewTopic={setNewTopic}
+      selectedTopic={selectedTopic}
+      setSelectedTopic={setSelectedTopic}
+      topics={topics}
+      addTopic={addTopic}
+      editTopic={editTopic}
+      addTask={addTask}
+      tasks={selectedTasks}
+      allTasks={tasks}
+      toggleTask={toggleTask}
+      deleteTask={deleteTask}
+      editTask={editTask}
+      clearTopic={clearTopic}
+      status={status}
+      error={error}
+      activeCount={activeCount}
+      completedCount={completedCount}
+    />
+  </div>
+);
 }
 
 export default App;

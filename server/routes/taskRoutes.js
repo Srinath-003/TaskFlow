@@ -24,10 +24,18 @@ router.use((req, res, next) => {
 router.get("/", async (req, res) => {
   try {
     const filter = getTopicFilter(req.query.topic);
-    const tasks = await Task.find(filter).sort({ _id: -1 });
+
+    const tasks = await Task.find({
+      ...filter,
+      userId: req.query.userId
+    }).sort({ _id: -1 });
+
     res.json(tasks);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch tasks", error: err.message });
+    res.status(500).json({
+      message: "Failed to fetch tasks",
+      error: err.message
+    });
   }
 });
 
@@ -41,7 +49,11 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Task text is required" });
     }
 
-    const newTask = new Task({ text, topic });
+    const newTask = new Task({
+  text,
+  topic,
+  userId: req.body.userId
+});
     const savedTask = await newTask.save();
     res.status(201).json(savedTask);
   } catch (err) {
