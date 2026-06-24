@@ -9,6 +9,15 @@ const getTopicFilter = (topic) => {
   return { topic };
 };
 
+const MAX_DUE_DATE = new Date("9999-12-31");
+
+const parseDueDate = (value) => {
+  if (typeof value !== "string" || !value) return undefined;
+
+  const dueDate = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(dueDate.getTime()) ? undefined : dueDate;
+};
+
 router.use((req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
     return res.status(503).json({
@@ -25,10 +34,21 @@ router.get("/", async (req, res) => {
   try {
     const filter = getTopicFilter(req.query.topic);
 
-    const tasks = await Task.find({
-      ...filter,
-      userId: req.query.userId
-    }).sort({ _id: -1 });
+    const tasks = await Task.aggregate([
+      {
+        $match: {
+          ...filter,
+          userId: req.query.userId
+        }
+      },
+      {
+        $addFields: {
+          dueDateSort: { $ifNull: ["$dueDate", MAX_DUE_DATE] }
+        }
+      },
+      { $sort: { dueDateSort: 1, _id: -1 } },
+      { $project: { dueDateSort: 0 } }
+    ]);
 
     res.json(tasks);
   } catch (err) {
@@ -52,6 +72,7 @@ router.post("/", async (req, res) => {
     const newTask = new Task({
   text,
   topic,
+  dueDate: parseDueDate(req.body.dueDate),
   userId: req.body.userId
 });
     const savedTask = await newTask.save();
@@ -65,7 +86,10 @@ router.post("/", async (req, res) => {
 router.delete("/", async (req, res) => {
   try {
     const filter = getTopicFilter(req.query.topic);
-    await Task.deleteMany(filter);
+    await Task.deleteMany({
+      ...filter,
+      userId: req.query.userId
+    });
     res.json({ message: req.query.topic ? "Topic tasks deleted" : "All tasks deleted" });
   } catch (err) {
     res.status(500).json({ message: "Failed to clear tasks", error: err.message });
@@ -82,7 +106,13 @@ router.patch("/topic", async (req, res) => {
       return res.status(400).json({ message: "Old and new topic names are required" });
     }
 
-    const result = await Task.updateMany(getTopicFilter(oldTopic), { topic: newTopic });
+    const result = await Task.updateMany(
+      {
+        ...getTopicFilter(oldTopic),
+        userId: req.body.userId
+      },
+      { topic: newTopic }
+    );
     res.json({ message: "Topic renamed", modifiedCount: result.modifiedCount });
   } catch (err) {
     res.status(500).json({ message: "Failed to rename topic", error: err.message });
@@ -116,6 +146,7 @@ router.delete("/:id", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const update = {};
+    const unset = {};
 
     if (typeof req.body.text === "string") {
       update.text = req.body.text.trim();
@@ -129,12 +160,26 @@ router.put("/:id", async (req, res) => {
       update.completed = req.body.completed;
     }
 
+    if (typeof req.body.dueDate === "string") {
+      if (req.body.dueDate) {
+        const dueDate = parseDueDate(req.body.dueDate);
+        if (dueDate) update.dueDate = dueDate;
+      } else {
+        unset.dueDate = "";
+      }
+    }
+
+    const updatePayload = {
+      ...(Object.keys(update).length ? { $set: update } : {}),
+      ...(Object.keys(unset).length ? { $unset: unset } : {})
+    };
+
     const updatedTask = await Task.findOneAndUpdate(
   {
     _id: req.params.id,
     userId: req.body.userId
   },
-  update,
+  updatePayload,
   {
     new: true,
     runValidators: true
