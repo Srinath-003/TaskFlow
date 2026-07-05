@@ -5,6 +5,9 @@ const cors = require("cors");
 
 const taskRoutes = require("./routes/taskRoutes");
 const authRoutes = require("./routes/authRoutes");
+const collaborationRoutes = require("./routes/collaborationRoutes");
+
+const { startScheduler } = require("./taskScheduler");
 const app = express();
 
 mongoose.set("bufferCommands", false);
@@ -14,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/tasks", taskRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/collaborations", collaborationRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
@@ -39,6 +43,7 @@ mongoose.connect(
     console.log("MongoDB Connected");
     app.listen(PORT, () => {
       console.log("Server running on port " + PORT);
+      startScheduler();
     });
   })
   .catch(err => {

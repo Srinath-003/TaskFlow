@@ -16,11 +16,11 @@ const UserSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: true
+      required: false
     },
     passwordSalt: {
       type: String,
-      required: true
+      required: false
     },
     sessionToken: {
       type: String,

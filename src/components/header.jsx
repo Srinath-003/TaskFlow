@@ -18,19 +18,11 @@ function Header() {
     window.location.reload();
   };
 
-  const handleTitleClick = () => {
-    window.location.hash = "/";
-  };
 
   return (
     <header className="app-header">
-      <h1
-        onClick={handleTitleClick}
-        onKeyDown={(e) => e.key === "Enter" && handleTitleClick()}
-        role="button"
-        tabIndex={0}
-      >
-        Task Manager
+      <h1>
+        TaskFlow
       </h1>
 
       <div className="header-actions">
