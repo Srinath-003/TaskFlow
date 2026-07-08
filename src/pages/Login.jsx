@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 
 const API_BASE = import.meta.env.DEV
@@ -6,23 +6,6 @@ const API_BASE = import.meta.env.DEV
   : (import.meta.env.VITE_API_URL || "https://task-manager-6wdd.onrender.com");
 
 function Login() {
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const user = params.get("user");
-    const error = params.get("error");
-
-    if (token && user) {
-      sessionStorage.setItem("token", token);
-      sessionStorage.setItem("user", user);
-      window.location.href = "/";
-    } else if (error) {
-      setErrorMsg(error);
-    } else if (sessionStorage.getItem("token")) {
-      window.location.href = "/";
-    }
-  }, []);
-
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -70,10 +53,6 @@ function Login() {
     } catch (err) {
       setErrorMsg(err.response?.data?.message || "Login failed");
     }
-  };
-
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE}/api/auth/google`;
   };
 
   return (
