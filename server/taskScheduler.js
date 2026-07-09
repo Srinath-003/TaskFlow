@@ -10,6 +10,17 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "Loaded" : "Missing");
+
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("SMTP Error:", error);
+  } else {
+    console.log("SMTP Ready");
+  }
+});
 
 const sendIndividualReminderEmail = async (toEmail, userName, taskText, remindTime) => {
   const html = `
@@ -63,12 +74,17 @@ const sendIndividualReminderEmail = async (toEmail, userName, taskText, remindTi
     </html>
   `;
 
-  await transporter.sendMail({
-    from: `"TaskFlow" <${process.env.EMAIL_USER}>`,  
+  console.log("Sending email to:", toEmail);
+  const info = await transporter.sendMail({
+    from: `"TaskFlow" <${process.env.EMAIL_USER}>`,
     to: toEmail,
-    subject: `🔔 Task Reminder: "${taskText.length > 30 ? taskText.slice(0, 30) + "..." : taskText}"`,
+    subject: `🔔 Task Reminder`,
     html
   });
+
+  console.log("Email sent:", info.response);
+
+
 };
 
 const checkAndNotifyReminders = async () => {
@@ -92,7 +108,7 @@ const checkAndNotifyReminders = async () => {
 
       for (let i = 0; i < task.reminders.length; i++) {
         const reminder = task.reminders[i];
-        
+
         if (reminder.active && reminder.remindAt <= now && !reminder.notificationSent) {
           try {
             // Find the user to notify
@@ -103,7 +119,7 @@ const checkAndNotifyReminders = async () => {
                 dateStyle: "medium",
                 timeStyle: "short"
               });
-              
+
               await sendIndividualReminderEmail(user.email, user.name || user.email, task.text, formattedTime);
               console.log(`[Scheduler] Reminder email sent to ${user.email} for task: "${task.text}"`);
             } else {

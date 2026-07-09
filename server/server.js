@@ -6,6 +6,7 @@ const cors = require("cors");
 const taskRoutes = require("./routes/taskRoutes");
 const authRoutes = require("./routes/authRoutes");
 const collaborationRoutes = require("./routes/collaborationRoutes");
+require("./emailService");
 
 const { startScheduler } = require("./taskScheduler");
 const app = express();
