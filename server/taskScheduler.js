@@ -36,7 +36,12 @@ const checkAndNotifyReminders = async () => {
                 timeStyle: "short"
               });
 
-              await sendReminderEmail(user.email, user.name || user.email, task.text, formattedTime);
+              await sendReminderEmail(
+                user.email,
+                user.name || user.email,
+                task.text,
+                formattedTime
+              );
               console.log(`[Scheduler] Reminder email sent to ${user.email} for task: "${task.text}"`);
             } else {
               console.warn(`[Scheduler] User not found or has no email: ${reminder.userId}`);
