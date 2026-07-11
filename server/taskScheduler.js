@@ -32,13 +32,36 @@ const checkAndNotifyReminders = async () => {
     }
 
     for (const task of tasksWithReminders) {
-      let taskUpdated = false;
-
       for (let i = 0; i < task.reminders.length; i++) {
         const reminder = task.reminders[i];
 
         if (reminder.active && reminder.remindAt <= now && !reminder.notificationSent) {
           try {
+            // Atomically claim this reminder using findOneAndUpdate so no other server instance can process it
+            const claimedTask = await Task.findOneAndUpdate(
+              {
+                _id: task._id,
+                reminders: {
+                  $elemMatch: {
+                    userId: reminder.userId,
+                    notificationSent: false,
+                    active: true
+                  }
+                }
+              },
+              {
+                $set: {
+                  "reminders.$.notificationSent": true
+                }
+              },
+              { new: true }
+            );
+
+            if (!claimedTask) {
+              console.log(`[Scheduler] Reminder for task ${task._id} already claimed by another server instance, skipping.`);
+              continue;
+            }
+
             // Find the user to notify
             const user = await User.findById(reminder.userId);
             if (user && user.email) {
@@ -59,31 +82,47 @@ const checkAndNotifyReminders = async () => {
               console.warn(`[Scheduler] User not found or has no email: ${reminder.userId}`);
             }
 
-            // Handle repeat
+            // Handle repeat and update database directly
             if (reminder.repeat === "daily") {
               const nextDate = new Date(reminder.remindAt);
               nextDate.setDate(nextDate.getDate() + 1);
-              reminder.remindAt = nextDate;
-              reminder.notificationSent = false;
+              await Task.updateOne(
+                { _id: task._id, "reminders.userId": reminder.userId },
+                {
+                  $set: {
+                    "reminders.$.remindAt": nextDate,
+                    "reminders.$.notificationSent": false
+                  }
+                }
+              );
             } else if (reminder.repeat === "weekly") {
               const nextDate = new Date(reminder.remindAt);
               nextDate.setDate(nextDate.getDate() + 7);
-              reminder.remindAt = nextDate;
-              reminder.notificationSent = false;
+              await Task.updateOne(
+                { _id: task._id, "reminders.userId": reminder.userId },
+                {
+                  $set: {
+                    "reminders.$.remindAt": nextDate,
+                    "reminders.$.notificationSent": false
+                  }
+                }
+              );
             } else {
               // "once": mark as inactive
-              reminder.active = false;
-              reminder.notificationSent = true;
+              await Task.updateOne(
+                { _id: task._id, "reminders.userId": reminder.userId },
+                {
+                  $set: {
+                    "reminders.$.active": false,
+                    "reminders.$.notificationSent": true
+                  }
+                }
+              );
             }
-            taskUpdated = true;
           } catch (err) {
             console.error(`[Scheduler] Failed to process reminder for task ${task._id}, user ${reminder.userId}:`, err.message);
           }
         }
-      }
-
-      if (taskUpdated) {
-        await task.save();
       }
     }
   } catch (err) {
