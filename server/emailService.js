@@ -55,6 +55,7 @@ const sendEmailJSEmail = async (
         : error.response.data
       : error.message;
 
+    const toEmail = params && params.to_email ? params.to_email : "unknown";
     console.error(`[EmailJS] Failed to send email to ${toEmail}:`, errorDetails);
     throw new Error(`EmailJS send failure: ${errorDetails}`);
   }
@@ -86,6 +87,21 @@ const sendDueTaskEmail = async (toEmail, userName, tasks) => {
     })
     .join("");
 
+  const html = `
+    <table style="width:100%;border-collapse:collapse;margin:15px 0;">
+      <thead>
+        <tr style="background-color:#f8fafc;text-align:left;">
+          <th style="padding:10px 14px;border-bottom:2px solid #e2e8f0;font-weight:600;">Task</th>
+          <th style="padding:10px 14px;border-bottom:2px solid #e2e8f0;font-weight:600;">Topic</th>
+          <th style="padding:10px 14px;border-bottom:2px solid #e2e8f0;font-weight:600;">Due Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${taskRows}
+      </tbody>
+    </table>
+  `;
+
   const params = {
     to_email: toEmail,
     to_name: userName,
@@ -93,15 +109,13 @@ const sendDueTaskEmail = async (toEmail, userName, tasks) => {
 
     subject: `⏰ Reminder: ${tasks.length} Task${tasks.length > 1 ? "s" : ""}`,
 
-    task_count: tasks.length
-};
+    task_count: tasks.length,
+    html: html
+  };
 
   const info = await sendEmailJSEmail(
     process.env.EMAILJS_TEMPLATE_REMINDER,
-    // toEmail,
-    // userName,
-    `⏰ Reminder: You have ${tasks.length} task${tasks.length > 1 ? "s" : ""} due`,
-    html
+    params
   );
 
   console.log(`[Email] Sent due-task reminder to ${toEmail} (${tasks.length} task${tasks.length > 1 ? "s" : ""})`);
@@ -125,18 +139,11 @@ const sendInviteEmail = async (toEmail, userName, topicName, inviterName) => {
 
     inviter: inviterName,
     topic: topicName
-};
+  };
 
-await sendEmailJSEmail(
-    process.env.EMAILJS_TEMPLATE_INVITE,
-    params
-);
   const info = await sendEmailJSEmail(
     process.env.EMAILJS_TEMPLATE_INVITE,
-    toEmail,
-    userName,
-    `✉️ Invitation to collaborate on "${topicName}"`,
-    html
+    params
   );
 
   console.log(`[Email] Sent invitation email to ${toEmail} for topic "${topicName}"`);
@@ -160,22 +167,14 @@ const sendReminderEmail = async (toEmail, userName, taskText, remindTime) => {
 
     task: taskText,
     remind_time: remindTime
-};
+  };
 
-await sendEmailJSEmail(
-    process.env.EMAILJS_TEMPLATE_REMINDER,
-    params
-);
-
-  console.log("Sending email to:", toEmail);
   const info = await sendEmailJSEmail(
     process.env.EMAILJS_TEMPLATE_REMINDER,
-    toEmail,
-    userName,
-    `🔔 Task Reminder`,
-    html
+    params
   );
 
+  console.log("Sending email to:", toEmail);
   console.log("Email sent:", info.response);
   return info;
 };

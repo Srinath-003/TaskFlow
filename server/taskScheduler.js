@@ -10,9 +10,13 @@ const checkAndNotifyReminders = async () => {
 
     // Find tasks that have at least one active, unsent reminder where remindAt <= now
     const tasksWithReminders = await Task.find({
-      "reminders.active": true,
-      "reminders.remindAt": { $lte: now },
-      "reminders.notificationSent": false
+      reminders: {
+        $elemMatch: {
+          active: true,
+          remindAt: { $lte: now },
+          notificationSent: false
+        }
+      }
     });
 
     if (tasksWithReminders.length === 0) {
