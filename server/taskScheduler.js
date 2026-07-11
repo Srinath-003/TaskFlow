@@ -3,7 +3,15 @@ const Task = require("./models/Task");
 const User = require("./models/User");
 const { sendReminderEmail } = require("./emailService");
 
+let isRunning = false;
+
 const checkAndNotifyReminders = async () => {
+  if (isRunning) {
+    console.log("[Scheduler] Reminder check already in progress, skipping this run.");
+    return;
+  }
+
+  isRunning = true;
   console.log("[Scheduler] Checking for active reminders...");
   try {
     const now = new Date();
@@ -80,6 +88,8 @@ const checkAndNotifyReminders = async () => {
     }
   } catch (err) {
     console.error("[Scheduler] Error checking reminders:", err.message);
+  } finally {
+    isRunning = false;
   }
 };
 
